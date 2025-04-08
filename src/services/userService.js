@@ -321,7 +321,7 @@ export const updateUserEmail = async (email) => {
       throw new Error('No access token available');
     }
 
-    // Get the current sheet data to find the last row and column
+    // Get the current sheet data to find the last column and row
     const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET1_NAME}!${SHEET1_RANGE}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -340,12 +340,29 @@ export const updateUserEmail = async (email) => {
     const data = await response.json();
     const values = data.values || [];
     
-    // Find the last column (E is the last column in SHEET1_RANGE)
-    const nextColumnLetter = 'F';
+    // Find the last column that contains data
+    let lastColumnIndex = 0;
+    if (values.length > 0) {
+      lastColumnIndex = values[0].length;
+    }
     
-    // Prepare the update request with valueInputOption
+    // Check if the email column already exists
+    let emailColumnIndex = -1;
+    if (values.length > 0) {
+      emailColumnIndex = values[0].findIndex(header => header === email);
+    }
+
+    // If email column doesn't exist, use the next available column
+    if (emailColumnIndex === -1) {
+      emailColumnIndex = lastColumnIndex;
+    }
+
+    // Convert column index to letter (A=0, B=1, etc.)
+    const columnLetter = String.fromCharCode(65 + emailColumnIndex);
+    
+    // Prepare the update request
     const updateResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET1_NAME}!${nextColumnLetter}1:${nextColumnLetter}${values.length}?valueInputOption=USER_ENTERED`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET1_NAME}!${columnLetter}1:${columnLetter}${values.length}?valueInputOption=USER_ENTERED`,
       {
         method: 'PUT',
         headers: {
@@ -353,12 +370,11 @@ export const updateUserEmail = async (email) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          range: `${SHEET1_NAME}!${nextColumnLetter}1:${nextColumnLetter}${values.length}`,
+          range: `${SHEET1_NAME}!${columnLetter}1:${columnLetter}${values.length}`,
           majorDimension: "ROWS",
           values: [
-            [email], // Use email as header
-            ...Array(values.length - 2).fill(['Access Given']), // Default value for all rows
-            ['Access Given'] // Last row with default value
+            [email], // Header row with email
+            ...Array(values.length - 1).fill(['Access Given']) // Default value for all other rows
           ]
         }),
       }
@@ -368,47 +384,6 @@ export const updateUserEmail = async (email) => {
       const errorData = await updateResponse.json();
       console.error('Sheet update error:', errorData);
       throw new Error(`Failed to update email: ${updateResponse.status}`);
-    }
-
-    // Add data validation for the dropdown
-    const validationResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requests: [{
-            setDataValidation: {
-              range: {
-                sheetId: 0, // Assuming Sheet1 is the first sheet
-                startRowIndex: 1, // Start from row 2 (after header)
-                endRowIndex: values.length,
-                startColumnIndex: 5, // Column F
-                endColumnIndex: 6
-              },
-              rule: {
-                condition: {
-                  type: 'ONE_OF_LIST',
-                  values: [
-                    { userEnteredValue: 'Access Given' },
-                    { userEnteredValue: 'No access' },
-                    { userEnteredValue: 'Finish' }
-                  ]
-                },
-                showCustomUi: true,
-                strict: true
-              }
-            }
-          }]
-        }),
-      }
-    );
-
-    if (!validationResponse.ok) {
-      console.error('Failed to add data validation');
     }
 
     return true;
