@@ -5,20 +5,20 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { UserProvider } from './context/UserContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter  } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <GoogleOAuthProvider clientId="158120509573-i5481f7v9go9qe63ohr2v5ni4f9t41ps.apps.googleusercontent.com">
         <Toaster position="top-right" />
         <UserProvider>
           <App />
         </UserProvider>
       </GoogleOAuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>
 );
 
