@@ -2,7 +2,7 @@
   "name": "course_demo",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/shashanki30/course-demo",
+  "homepage": "https://shashanki30.github.io/course-demo",
   "dependencies": {
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
